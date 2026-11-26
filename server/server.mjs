@@ -47,10 +47,12 @@ export function createServer({run=search,secret=process.env.APP_TOKEN}={}){
  if(!secret||secret.length<24)throw Error('APP_TOKEN deve ter pelo menos 24 caracteres aleatórios.');
  let calls=[],active=false;
  return http.createServer(async(req,res)=>{
-  if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true});
-  if(req.method==='GET'&&['/','/diagnostico'].includes(req.url)){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"});return res.end(readFileSync(new URL('./diagnostico.html',import.meta.url)));}
-  if(req.method==='POST'&&req.url==='/check'){const ok=authorized(req,secret);console.log('Diagnóstico: autenticação '+(ok?'aceita':'recusada'));return send(res,ok?200:401,ok?{ok:true}:{error:'Código de acesso incorreto. Confira o APP_TOKEN.'});}
-  if(req.method!=='POST'||req.url!=='/research')return send(res,404,{error:'Rota inválida'});
+  const route=new URL(req.url,'http://localhost').pathname.replace(/\/+$/,'')||'/';
+  if(req.method==='GET'&&route==='/health')return send(res,200,{ok:true});
+  if(req.method==='GET'&&['/','/diagnostico'].includes(route)){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"});return res.end(readFileSync(new URL('./diagnostico.html',import.meta.url)));}
+  if(req.method==='POST'&&route==='/check'){const ok=authorized(req,secret);console.log('Diagnóstico: autenticação '+(ok?'aceita':'recusada'));return send(res,ok?200:401,ok?{ok:true}:{error:'Código de acesso incorreto. Confira o APP_TOKEN.'});}
+  if(req.method==='GET'&&route==='/research')return send(res,200,{ok:true,message:'Para pesquisar, abra /diagnostico ou o aplicativo.'});
+  if(req.method!=='POST'||route!=='/research'){console.log('Rota não reconhecida: '+req.method);return send(res,404,{error:'Rota inválida',diagnostico:'/diagnostico'});}
   console.log('Pesquisa: solicitação recebida');
   res.once('finish',()=>console.log('Pesquisa: resposta HTTP '+res.statusCode));
   if(!authorized(req,secret))return send(res,401,{error:'Código de acesso incorreto. Confira o APP_TOKEN do Render.'});
