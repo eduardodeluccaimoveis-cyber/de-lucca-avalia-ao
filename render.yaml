@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: de-lucca-pesquisa
+    runtime: node
+    rootDir: server
+    buildCommand: npm test
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: APP_TOKEN
+        generateValue: true
+      - key: OPENAI_MODEL
+        value: gpt-5-mini
