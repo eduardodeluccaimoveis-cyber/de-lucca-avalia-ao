@@ -1,0 +1,30 @@
+name: Compilar APK Android
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Instalar SDK Android
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Compilar e verificar
+        run: |
+          gradle --no-daemon :app:assembleDebug
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk De-Lucca-Avaliacao-2.1-teste.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: De-Lucca-APK-teste
+          path: De-Lucca-Avaliacao-2.1-teste.apk
