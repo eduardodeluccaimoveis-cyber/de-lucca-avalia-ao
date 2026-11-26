@@ -48,12 +48,14 @@ export function createServer({run=search,secret=process.env.APP_TOKEN}={}){
  return http.createServer(async(req,res)=>{
   if(req.method==='GET'&&req.url==='/health')return send(res,200,{ok:true});
   if(req.method!=='POST'||req.url!=='/research')return send(res,404,{error:'Rota inválida'});
-  if(!authorized(req,secret))return send(res,401,{error:'Código de acesso incorreto'});
+  console.log('Pesquisa: solicitação recebida');
+  res.once('finish',()=>console.log('Pesquisa: resposta HTTP '+res.statusCode));
+  if(!authorized(req,secret))return send(res,401,{error:'Código de acesso incorreto. Confira o APP_TOKEN do Render.'});
   if(!String(req.headers['content-type']).startsWith('application/json'))return send(res,415,{error:'Formato inválido'});
   let q;try{q=validate(await body(req));}catch(e){return send(res,400,{error:e.message});}
   const now=Date.now();calls=calls.filter(t=>now-t<86400000);if(active||calls.length>=20||calls.filter(t=>now-t<60000).length>=2)return send(res,429,{error:'Limite de pesquisa atingido. Aguarde ou tente amanhã.'});
   active=true;calls.push(now);
-  try{return send(res,200,await run(q));}catch(e){return send(res,502,{error:String(e.message||'Pesquisa indisponível').slice(0,300)});}finally{active=false;}
+  try{console.log('Pesquisa: iniciando consulta OpenAI');const result=await run(q);console.log('Pesquisa: candidatos aprovados '+(result.samples?.length??0));return send(res,200,result);}catch(e){console.error('Pesquisa: falha na consulta ('+(e.name==='TimeoutError'?'tempo excedido':'erro de processamento')+')');return send(res,502,{error:String(e.message||'Pesquisa indisponível').slice(0,300)});}finally{active=false;}
  });
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
