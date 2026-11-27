@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -44,3 +44,20 @@ jobs:
         with:
           name: De-Lucca-APK-teste
           path: De-Lucca-Avaliacao-3.0-teste.apk
+      - name: Publicar APK 3.0 nos Releases
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=v3.0.0
+          apk=De-Lucca-Avaliacao-3.0-teste.apk
+          if gh release view "$tag" --json tagName >/dev/null 2>&1; then
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$apk"; then
+              echo "APK desta versão já publicado; preservando a assinatura do arquivo original."
+            else
+              gh release upload "$tag" "$apk"
+            fi
+          else
+            gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "De Lucca Avaliação Imobiliária PRO 3.0" --notes "APK Android de teste (assinatura debug). Pesquisa automática de anúncios via servidor configurado com APP_TOKEN. Faça backup das avaliações antes de atualizar; se as assinaturas forem diferentes, a instalação por cima poderá falhar. Não é necessário extrair ZIP." --prerelease
+          fi
+          gh release view "$tag" --json url,assets --jq '{url: .url, arquivos: [.assets[].name]}'
